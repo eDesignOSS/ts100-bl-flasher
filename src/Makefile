@@ -20,9 +20,17 @@
 BINARY = ts100
 SRCS := $(wildcard *.c)
 OBJS += $(SRCS:.c=.o)
+OBJS += payload.o
 DEPS  = $(SRCS:.c=.d)
 
+.DEFAULT_GOAL=ts100
+
 LDSCRIPT = ../ts100.ld
+
+ts100: $(BINARY).elf $(BINARY).bin $(BINARY).hex
+
+payload.o: payload.rom
+	arm-none-eabi-objcopy -I binary -O elf32-littlearm -B arm payload.rom payload.o
 
 include ../Makefile.include
 
