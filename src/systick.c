@@ -17,7 +17,7 @@ void systick_init(uint64_t freq) {
 }
 
 void delay_ms(uint32_t ms) {
-  uint32_t endtime = ms*1000 + count;
+  uint32_t endtime = ms + count;
 
   while(count < endtime);
 }
