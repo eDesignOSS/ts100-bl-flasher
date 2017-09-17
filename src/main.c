@@ -27,6 +27,7 @@
 
 #include "i2c.h"
 #include "systick.h"
+#include "oled.h"
 
 extern uint32_t _binary_payload_rom_start;
 extern uint32_t _binary_payload_rom_end;
@@ -38,9 +39,14 @@ int main(void)
 
   systick_init(48000000);
   i2c_init();
+  Init_Oled(0);
 
   delay_ms(1);
 
+  Clear_Screen();
+  OLED_DrawString("hello", 5);
+
+  while(1);
   // Flash firmware
   uint8_t *ptr = (uint8_t*)&_binary_payload_rom_start;
   uint8_t *flashptr = (unsigned char*)0x08000000;
