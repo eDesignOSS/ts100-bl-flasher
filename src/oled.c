@@ -141,25 +141,18 @@ void Oled_DrawArea(uint8_t x, uint8_t y, uint8_t wide, uint8_t height, const uin
 }
 
 /*******************************************************************************
- Function:GPIO_Init_OLED
- Description:Init the outputs as needed for the OLED (in this case the RST line)
- *******************************************************************************/
-void GPIO_Init_OLED(void) {
-  gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ,
-                GPIO_CNF_OUTPUT_PUSHPULL,
-                GPIO8);
-}
-/*******************************************************************************
  Function: Init_Oled
  Description: Initializes the Oled screen
  *******************************************************************************/
 void Init_Oled(uint8_t leftHanded) {
-
+  gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ,
+                GPIO_CNF_OUTPUT_PUSHPULL,
+                GPIO8);
 	currentOrientation = leftHanded;
 	uint8_t param_len;
-	OLED_RST();
+  gpio_set(GPIOA, GPIO8);
 	delay_ms(5);
-	OLED_ACT(); //Toggling reset to reset the oled
+  gpio_clear(GPIOA, GPIO8); //Toggling reset to reset the oled
 	delay_ms(5);
 	param_len = 46;
 	if (leftHanded == 1) {
