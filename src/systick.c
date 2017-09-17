@@ -3,7 +3,7 @@
 
 #include "systick.h"
 
-uint32_t count = 0;
+volatile uint32_t count = 0;
 
 void sys_tick_handler(void) {
   count ++;
@@ -16,8 +16,8 @@ void systick_init(uint64_t freq) {
   systick_counter_enable();
 }
 
-void delay_ms(uint32_t ticks) {
-  uint32_t endtime = ticks + count;
+void delay_ms(uint32_t ms) {
+  uint32_t endtime = ms*1000 + count;
 
   while(count < endtime);
 }
