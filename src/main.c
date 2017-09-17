@@ -18,10 +18,16 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
+#include <libopencm3/stm32/flash.h>
+
+extern uint32_t _binary_payload_rom_start;
+extern uint32_t _binary_payload_rom_end;
+extern uint32_t _binary_payload_rom_size;
 
 static const struct usb_device_descriptor dev = {
 	.bLength = USB_DT_DEVICE_SIZE,
@@ -234,8 +240,6 @@ static void cdcacm_set_config(usbd_device *usbd_dev, uint16_t wValue)
 
 int main(void)
 {
-	int i;
-
 	usbd_device *usbd_dev;
 
 	rcc_clock_setup_in_hsi_out_48mhz();
@@ -249,9 +253,28 @@ int main(void)
 	usbd_dev = usbd_init(&st_usbfs_v1_usb_driver, &dev, &config, usb_strings, 3, usbd_control_buffer, sizeof(usbd_control_buffer));
 	usbd_register_set_config_callback(usbd_dev, cdcacm_set_config);
 
-	for (i = 0; i < 0x800000; i++)
+	for (int i = 0; i < 0x800000; i++)
 		__asm__("nop");
 	gpio_clear(GPIOC, GPIO11);
+
+  // Flash firmware
+  uint8_t *ptr = (uint8_t*)&_binary_payload_rom_start;
+  uint8_t *flashptr = (unsigned char*)0x08000000;
+
+  for(uint32_t i = 0; i < (0x4000 / 1024); i++) {
+    flash_unlock();
+    flash_erase_page((uint32_t)(flashptr + (i*1024)));
+    flash_lock();
+  }
+
+  for(uint32_t i = 0; i < _binary_payload_rom_size; i+=4) {
+    int buf = 0;
+    flash_unlock();
+    memcpy(&buf, ptr + i, 4);
+    flash_program_word((uint32_t)(flashptr + i), buf);
+    flash_lock();
+  }
+
 
 	while (1)
 		usbd_poll(usbd_dev);
