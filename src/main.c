@@ -17,6 +17,7 @@
  * along with this library.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <libopencm3/stm32/rcc.h>
@@ -26,12 +27,14 @@
 #include <libopencm3/cm3/systick.h>
 
 #include "systick.h"
+#include "crc32.h"
 #include "oled.h"
 
 extern uint32_t _binary_payload_rom_start;
 extern uint32_t _binary_payload_rom_end;
 extern uint32_t _binary_payload_rom_size;
 
+void i2c_init(void);
 void i2c_init(void) {
 	rcc_periph_clock_enable(RCC_GPIOB | RCC_I2C1);
   gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_50_MHZ,
@@ -45,22 +48,70 @@ void i2c_init(void) {
   i2c_peripheral_enable(I2C1);
 }
 
+void gpio_init(void);
+void gpio_init(void) {
+	rcc_periph_clock_enable(RCC_GPIOC);
+  gpio_set_mode(GPIOA, GPIO_MODE_INPUT,
+                GPIO_CNF_INPUT_PULL_UPDOWN,
+                GPIO9);
+  gpio_set(GPIOA, GPIO9);
+}
+
+void keydnup(void);
+void keydnup(void) {
+  // Key down
+  while(gpio_get(GPIOA, GPIO9)) { delay_ms(1); }
+  // Key up
+  while(!gpio_get(GPIOA, GPIO9)) { delay_ms(1); }
+}
+
 int main(void)
 {
 	rcc_clock_setup_in_hsi_out_48mhz();
 
   systick_init(48000000);
   i2c_init();
+  gpio_init();
   Init_Oled(0);
-
   delay_ms(1);
 
   Clear_Screen();
-  OLED_DrawString("hello", 5);
+  OLED_Sync();
+  OLED_DrawString("BL Flash", 8);
+  OLED_Sync();
+  delay_ms(1000);
+  Clear_Screen();
+  OLED_DrawString("CONT?", 5);
+  OLED_Sync();
 
-  while(1);
+  keydnup();
+
+  uint32_t bl_crc32 = 0;
+  char bl_crc32_hex[9] = {0, };
+  uint8_t *bl_ptr = (uint8_t*)&_binary_payload_rom_start;
+  size_t bl_size = (size_t)&_binary_payload_rom_size;
+
+  bl_crc32 = crc32(bl_crc32, bl_ptr, bl_size);
+
+  for(int i = 0; i < 8; i++) {
+    bl_crc32_hex[7 - i] = (bl_crc32 & 0xF) + '0';
+    if (bl_crc32_hex[7 - i] > '9') {
+      bl_crc32_hex[7 - i] += 7;
+    }
+    bl_crc32 = bl_crc32 >> 4;
+  }
+
+  Clear_Screen();
+  OLED_DrawString("CHK CRC", 7);
+  OLED_Sync();
+  delay_ms(1000);
+  Clear_Screen();
+  OLED_DrawString(bl_crc32_hex, 8);
+  OLED_Sync();
+
+  keydnup();
+
   // Flash firmware
-  uint8_t *ptr = (uint8_t*)&_binary_payload_rom_start;
   uint8_t *flashptr = (unsigned char*)0x08000000;
 
   for(uint32_t i = 0; i < (0x4000 / 1024); i++) {
@@ -69,13 +120,17 @@ int main(void)
     flash_lock();
   }
 
-  for(uint32_t i = 0; i < _binary_payload_rom_size; i+=4) {
+  for(size_t i = 0; i < bl_size; i+=4) {
     int buf = 0;
     flash_unlock();
-    memcpy(&buf, ptr + i, 4);
+    memcpy(&buf, bl_ptr + i, 4);
     flash_program_word((uint32_t)(flashptr + i), buf);
     flash_lock();
   }
+
+  Clear_Screen();
+  OLED_DrawString("Done!", 5);
+  OLED_Sync();
 
   for(;;);
 }
