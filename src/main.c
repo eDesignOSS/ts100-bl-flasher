@@ -25,6 +25,7 @@
 #include <libopencm3/stm32/i2c.h>
 #include <libopencm3/stm32/flash.h>
 #include <libopencm3/cm3/systick.h>
+#include <libopencm3/cm3/scb.h>
 
 #include "systick.h"
 #include "crc32.h"
@@ -67,7 +68,8 @@ void keydnup(void) {
 
 int main(void)
 {
-	rcc_clock_setup_in_hsi_out_48mhz();
+  SCB_VTOR=0x4000;
+  rcc_clock_setup_in_hsi_out_48mhz();
 
   systick_init(48000000);
   i2c_init();
