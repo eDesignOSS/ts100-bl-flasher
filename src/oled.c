@@ -9,7 +9,6 @@
 #include <string.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/i2c.h>
-#include "i2c.h"
 #include "systick.h"
 
 #include "oled.h"
@@ -58,7 +57,7 @@ void Oled_DisplayOn(void) {
 		uint8_t data[6] = { 0x80, 0X8D, 0x80, 0X14, 0x80, 0XAF };
 
 
-		i2c_write(data, 6, DEVICEADDR_OLED);
+    i2c_transfer7(I2C1, DEVICEADDR_OLED, data, 6, NULL, 0);
 		OLEDOnOffState = 1;
 	}
 }
@@ -70,7 +69,7 @@ void Oled_DisplayOff(void) {
 	if (OLEDOnOffState != 2) {
 		uint8_t data[6] = { 0x80, 0X8D, 0x80, 0X10, 0x80, 0XAE };
 
-		i2c_write(data, 6, DEVICEADDR_OLED);
+    i2c_transfer7(I2C1, DEVICEADDR_OLED, data, 6, NULL, 0);
 		OLEDOnOffState = 2;
 	}
 }
@@ -93,7 +92,7 @@ const uint8_t* Data_Command(uint8_t length, const uint8_t* data) {
 		else
 			tx_data[i] = *data++;
 	}
-	i2c_write(tx_data, length, DEVICEADDR_OLED); //write out the buffer
+  i2c_transfer7(I2C1, DEVICEADDR_OLED, tx_data, length, NULL, 0); //write out the buffer
 	return data;
 }
 //This causes us to write out the buffered screen data to the display
@@ -114,7 +113,7 @@ void Set_ShowPos(uint8_t x, uint8_t y) {
 	//page 0, start add = x(below) through to 0x7F (aka 127)
 	pos_param[5] = x + displayOffset;/*Display offset ==0 for Lefty, == 32 for righty*/
 	pos_param[1] += y;
-	i2c_write(pos_param, 8, DEVICEADDR_OLED);
+  i2c_transfer7(I2C1, DEVICEADDR_OLED, pos_param, 8, NULL, 0);
 }
 
 /*******************************************************************************
@@ -150,9 +149,9 @@ void Init_Oled(uint8_t leftHanded) {
                 GPIO8);
 	currentOrientation = leftHanded;
 	uint8_t param_len;
-  gpio_set(GPIOA, GPIO8);
+  gpio_clear(GPIOA, GPIO8);
 	delay_ms(5);
-  gpio_clear(GPIOA, GPIO8); //Toggling reset to reset the oled
+  gpio_set(GPIOA, GPIO8); //Toggling reset to reset the oled
 	delay_ms(5);
 	param_len = 46;
 	if (leftHanded == 1) {
@@ -164,7 +163,7 @@ void Init_Oled(uint8_t leftHanded) {
 		OLED_Setup_Array[19] = 0x40;
 		displayOffset = 32;
 	}
-	i2c_write((uint8_t *) OLED_Setup_Array, param_len, DEVICEADDR_OLED);
+  i2c_transfer7(I2C1, DEVICEADDR_OLED, OLED_Setup_Array, param_len, NULL, 0);
 	for (uint8_t i = 0; i < 2 * 96; i++)
 		displayBuffer[i] = 0; //turn off screen
 }

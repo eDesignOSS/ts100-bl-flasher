@@ -25,13 +25,25 @@
 #include <libopencm3/stm32/flash.h>
 #include <libopencm3/cm3/systick.h>
 
-#include "i2c.h"
 #include "systick.h"
 #include "oled.h"
 
 extern uint32_t _binary_payload_rom_start;
 extern uint32_t _binary_payload_rom_end;
 extern uint32_t _binary_payload_rom_size;
+
+void i2c_init(void) {
+	rcc_periph_clock_enable(RCC_GPIOB | RCC_I2C1);
+  gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_50_MHZ,
+                GPIO_CNF_OUTPUT_ALTFN_OPENDRAIN,
+                GPIO_I2C1_SCL | GPIO_I2C1_SDA);
+  i2c_peripheral_disable(I2C1);
+  i2c_set_clock_frequency(I2C1, I2C_CR2_FREQ_24MHZ);
+  i2c_set_fast_mode(I2C1);
+  i2c_set_ccr(I2C1, 0x14);
+  i2c_set_trise(I2C1, 0x08);
+  i2c_peripheral_enable(I2C1);
+}
 
 int main(void)
 {
